@@ -1,13 +1,17 @@
 %% 导入数据
 clear
 clc
-
-load('doppler_all.mat');% matlab仿真出的多普勒
 load('doppler_01.mat');% QR0 QR3 真值
 load('SDTest_Data.mat');% 读取的多普勒单差
-load('RealSingleDiff_Data.mat');% matlab仿真出的单差
 load('DDTest_Data.mat');% 读取的多普勒双差
-load('DoubleDiff_Data');% matlab仿真出的双差
+% 单差
+load(GetStructName('doppler_all'));% matlab仿真出的多普勒
+Single_Diff(Fixed_Data, True_Data);
+% 双差
+load(GetStructName('RealSingleDiff_Data'));% matlab仿真出的单差
+Double_Diff(RealSingleDiff_Data, 'G19', 'C30');
+load(GetStructName('DoubleDiff_Data'));% matlab仿真出的双差
+
 %% 与接收机中的多普勒对比
 sate_N = length(Fixed_Data.PRN);
 for i = 1:sate_N
@@ -34,32 +38,18 @@ for i = 1:Sate_N
     myplot1(True_Data.time{i}, True_Data.doppler{i}, 'doppler', True_Data.PRN{i}, i, 'r');
 end
 
-%% 单差
-Single_Diff(Fixed_Data, True_Data);
-%% 双差
-Double_Diff(RealSingleDiff_Data, 'G19', 'C30');
+
 %% plot 单差对比
-Sate_N = length(RealSingleDiff_Data.PRN);
-for i = 1:Sate_N
-    if length(RealSingleDiff_Data.time{i})<100
-        continue
-    end
-    
-    Prn_Index = strcmp(SDTest_Data.PRN, RealSingleDiff_Data.PRN{i});
-    if sum(Prn_Index) == 0
-        continue;
-    elseif sum(Prn_Index) == 1
-        myplot1(RealSingleDiff_Data.time{i}, RealSingleDiff_Data.doppler{i} + 10, 'doppler', RealSingleDiff_Data.PRN{i}, i, 'r');
-        hold on
-        myplot1(SDTest_Data.time{Prn_Index}, SDTest_Data.doppler{Prn_Index}, 'doppler', RealSingleDiff_Data.PRN{i}, i, 'blue');
-        hold on
-        legend('接收机','仿真');
-    end
-end
-%% plot 单差对比
+
 plotcompare(RealSingleDiff_Data, SDTest_Data);
 %% plot 双差对比
 plotcompare(DoubleDiff_Data, DDTest_Data);
+%% plot双差
+Sate_N = length(DoubleDiff_Data.PRN);
+
+for i = 1:Sate_N
+    myplot1(DoubleDiff_Data.time{i}, DoubleDiff_Data.doppler{i}, 'doppler', DoubleDiff_Data.PRN{i}, i, 'r');
+end
 %% 测试
 Data = RealSingleDiff_Data;
 ref_gps = 'G19';
@@ -125,7 +115,7 @@ function myplot1(X, Y, ylabel_s, title_str, n, color)
 %PLOTWAV 此处显示有关此函数的摘要
 %   此处显示详细说明
 
-figure(n);
+figure(n);set(gcf,'Position',get(0,'ScreenSize'));
 plot(X, Y, 'Color', color);
 axis xy
 axis tight
@@ -148,9 +138,14 @@ for i = 1:Sate_N
     elseif sum(Prn_Index) == 1
         myplot1(Data1.time{i}, Data1.doppler{i}, 'doppler', strrep(Data1.PRN{i}, '_', '\_'), i, 'r');
         hold on
-        myplot1(Data2.time{Prn_Index}, Data2.doppler{Prn_Index}, 'doppler', strrep(Data1.PRN{i}, '_', '\_'), i, 'blue');
-        hold on
-        legend('接收机','仿真');
+        %myplot1(Data2.time{Prn_Index}, Data2.doppler{Prn_Index}, 'doppler', strrep(Data1.PRN{i}, '_', '\_'), i, 'blue');
+        plot(Data2.time{Prn_Index}, Data2.doppler{Prn_Index}, '--', 'Color', 'blue');
+        axis xy
+        axis tight
+        ylabel('doppler');
+        xlabel('Time (secs)');
+        hold off
+        legend('data1','data2');
     end
 end
 end
@@ -188,7 +183,7 @@ function Single_Diff(Data, Ref_Data)
         end
     end
     RealSingleDiff_Data = GetDataStruct(timetmp, doptmp, PRNtmp);
-    save('RealSingleDiff_Data.mat', 'RealSingleDiff_Data');
+    save(GetStructName('RealSingleDiff_Data'), 'RealSingleDiff_Data');
     
 end
 % 双差
@@ -247,10 +242,15 @@ for i = 1:length(Data.PRN)
     end
 end
 DoubleDiff_Data = GetDataStruct(timetemp, doptemp, PRNtmp);
-save('DoubleDiff_Data.mat', 'DoubleDiff_Data')
+save(GetStructName('DoubleDiff_Data'), 'DoubleDiff_Data')
 end
 function [Data] = GetDataStruct(time, dop, PRN)
 Data.time = time;
 Data.PRN =PRN;
 Data.doppler = dop;
+end
+
+function StructName = GetStructName(NameStr)
+load('/home/ftw/work_space/Matlab/Gittest/Branch.mat');
+StructName = [NameStr, '_', num2str(Branch), '.mat'];
 end

@@ -5,6 +5,10 @@ clear
 CLIGHT = 299792458.0;
 FREQ1 = 1.57542E9;
 FREQ1_CMP = 1.561098E9;
+
+% Branch = 1;
+Branch = 3;
+save('Branch.mat', 'Branch');
 % 变量
 RefPrn = 19;%GPS 19作为起始参考星
 
@@ -92,6 +96,27 @@ while(1)
         [RefSate, Chooseindex] = Select_RefSateExtraSPP(obs, n);
         if RefSate ~= RefPrn
             if RefSate > 0 %换星成功
+                
+%                 % 换星后的滤波器变量修改
+%                 for i = 1:64
+%                     if RefSate == i
+%                         continue;
+%                     end
+%                     if RefPrn == i
+%                         continue;
+%                     end
+%                     ChangeRefStarDoppler(RefSate, i);
+%                 end
+%                 ChangeRefStarDoppler_E(RefSate, RefPrn);
+                % 基站观测量保存
+                if (sum(PRN == obs{Chooseindex}.sat)) == 0
+                    PRN = [PRN, obs{Chooseindex}.sat];
+                    time_p = [time_p, GPSTime];
+                    dop_p = [dop_p, obs{Chooseindex}.D];
+                elseif (sum(PRN == obs{Chooseindex}.sat)) == 1
+                    time_p{PRN == obs{Chooseindex}.sat} = [time_p{PRN == obs{Chooseindex}.sat}, GPSTime];
+                    dop_p{PRN == obs{Chooseindex}.sat} = [dop_p{PRN == obs{Chooseindex}.sat}, obs{Chooseindex}.D];
+                end
                 %改变滤波器状态
                 
                 RefPrn = RefSate;
@@ -125,15 +150,7 @@ while(1)
     % 读取下一次的时间及星数
     [GPSTime, n] = ReadObsTimeInfo(h_txt_file);
 end
-%% 画图
-sate_N = length(dop_p);
-for i = 1:sate_N
-    if length(time_p{i})<100
-        continue
-    end
-    myplot(time_p{i}, dop_p{i}, 'doppler', num2str(PRN(i)), i);
-end
-%% 保存数据
+% 保存数据
 sate_N = length(dop_p);
 PRN_str = cell(1, sate_N);
 for i = 1:sate_N
@@ -147,7 +164,17 @@ end
 Fixed_Data.PRN = PRN_str;
 Fixed_Data.time = time_p;
 Fixed_Data.doppler = dop_p;
-save('doppler_all.mat', 'Fixed_Data');
+file_name = ['doppler_all_' num2str(Branch) '.mat'];
+save(file_name, 'Fixed_Data');
+%% 画图
+sate_N = length(dop_p);
+for i = 1:sate_N
+    if length(time_p{i})<100
+        continue
+    end
+    myplot(time_p{i}, dop_p{i}, 'doppler', num2str(PRN(i)), i);
+end
+
 %% 滤波器测试
 clear
 clc
@@ -299,7 +326,24 @@ function ChangeRefStarDoppler(Refnum, satenum)
     end
 end
 
-
+function ChangeRefStarDoppler_E(Refnum, satenum)
+    global SateMap;
+    global MeasureData;
+    temltRef = SateMap{1} == Refnum;
+    temltSate = SateMap{1} == satenum;
+    if (sum(temltRef) == 1)&&(sum(temltSate) == 1)
+        size = min(length(MeasureData{SateMap{2}(temltSate)}.Mdoppler_Group), ...
+            (length(MeasureData{temltRef}.Mdoppler_Group)));
+        if size == 0
+            return;
+        end
+        MeasureData{SateMap{2}(temltSate)}.Mdoppler_Group(1:size) = ...
+            -MeasureData{SateMap{2}(temltRef)}.Mdoppler_Group(1:size);
+        
+        MeasureData{SateMap{2}(temltSate)}.Filter_Mdoppler = ...
+            -MeasureData{SateMap{2}(temltRef)}.Filter_Mdoppler;
+    end
+end
 % 读取数据相关函数
 function [GPSTime, n] = ReadObsHead(h_txt_file)
 C = textscan(h_txt_file,...
