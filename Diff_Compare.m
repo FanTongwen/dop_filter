@@ -4,13 +4,13 @@ clc
 load('doppler_01.mat');% QR0 QR3 真值
 load('SDTest_Data.mat');% 读取的多普勒单差
 load('DDTest_Data.mat');% 读取的多普勒双差
-% 单差
-load(GetStructName('doppler_all'));% matlab仿真出的多普勒
-Single_Diff(Fixed_Data, True_Data);
-% 双差
-load(GetStructName('RealSingleDiff_Data'));% matlab仿真出的单差
+%% 单差
+%load(GetStructName('doppler_all'));% matlab仿真出的多普勒
+Single_Diff(Predict_Data, True_Data);
+%% 双差
+%load(GetStructName('RealSingleDiff_Data'));% matlab仿真出的单差
 Double_Diff(RealSingleDiff_Data, 'G19', 'C30');
-load(GetStructName('DoubleDiff_Data'));% matlab仿真出的双差
+%load(GetStructName('DoubleDiff_Data'));% matlab仿真出的双差
 
 %% 与接收机中的多普勒对比
 sate_N = length(Fixed_Data.PRN);
@@ -43,7 +43,7 @@ end
 
 plotcompare(RealSingleDiff_Data, SDTest_Data);
 %% plot 双差对比
-plotcompare(DoubleDiff_Data, DDTest_Data);
+plotcompare_3(DoubleDiff_Data, DDTest_Data);
 %% plot双差
 Sate_N = length(DoubleDiff_Data.PRN);
 
@@ -116,14 +116,25 @@ function myplot1(X, Y, ylabel_s, title_str, n, color)
 %   此处显示详细说明
 
 figure(n);set(gcf,'Position',get(0,'ScreenSize'));
-plot(X, Y, 'Color', color);
+plot(X, Y, 'Color', color, 'Marker', '.', 'LineStyle', 'none');
 axis xy
 axis tight
 ylabel(ylabel_s);
 xlabel('Time (secs)');
 title(title_str);
 end
+% 画图
+function myplot2(X, Y, ylabel_s, n, color)
+%PLOTWAV 此处显示有关此函数的摘要
+%   此处显示详细说明
 
+figure(n);set(gcf,'Position',get(0,'ScreenSize'));
+plot(X, Y, 'Color', color, 'Marker', '.', 'LineStyle', 'none');
+axis xy
+axis tight
+ylabel(ylabel_s);
+xlabel('Time (secs)');
+end
 % 画图对比 
 function plotcompare(Data1, Data2)
 Sate_N = length(Data1.PRN);
@@ -136,19 +147,51 @@ for i = 1:Sate_N
     if sum(Prn_Index) == 0
         continue;
     elseif sum(Prn_Index) == 1
-        myplot1(Data1.time{i}, Data1.doppler{i}, 'doppler', strrep(Data1.PRN{i}, '_', '\_'), i, 'r');
+        myplot2(Data1.time{i}, Data1.doppler{i}, 'doppler', i, 'r');
         hold on
-        %myplot1(Data2.time{Prn_Index}, Data2.doppler{Prn_Index}, 'doppler', strrep(Data1.PRN{i}, '_', '\_'), i, 'blue');
-        plot(Data2.time{Prn_Index}, Data2.doppler{Prn_Index}, '--', 'Color', 'blue');
-        axis xy
-        axis tight
-        ylabel('doppler');
-        xlabel('Time (secs)');
+        myplot2(Data2.time{Prn_Index}, Data2.doppler{Prn_Index}, 'doppler', i, 'blue');
+        title(strrep(Data1.PRN{i}, '_', '\_'));
+%         plot(Data2.time{Prn_Index}, Data2.doppler{Prn_Index}, '--', 'Color', 'blue');
+%         axis xy
+%         axis tight
+%         ylabel('doppler');
+%         xlabel('Time (secs)');
         hold off
         legend('data1','data2');
     end
 end
 end
+
+% 画图对比 
+function plotcompare_3(Data1, Data2)
+Sate_N = length(Data1.PRN);
+load('change_prn_Data.mat');
+for i = 1:Sate_N
+    if length(Data1.time{i})<100
+        continue
+    end
+    
+    Prn_Index = strcmp(Data2.PRN, Data1.PRN{i});
+    if sum(Prn_Index) == 0
+        continue;
+    elseif sum(Prn_Index) == 1
+        myplot2(Data1.time{i}, Data1.doppler{i}, 'doppler', i, 'r');
+        hold on
+        myplot2(Data2.time{Prn_Index}, Data2.doppler{Prn_Index}, 'doppler', i, 'blue');
+        hold on
+        myplot2(change_prn_Data.time, change_prn_Data.PRN/max(change_prn_Data.PRN)*max(Data2.doppler{Prn_Index}), 'doppler', i, 'g');
+        title(strrep(Data1.PRN{i}, '_', '\_'));
+%         plot(Data2.time{Prn_Index}, Data2.doppler{Prn_Index}, '--', 'Color', 'blue');
+%         axis xy
+%         axis tight
+%         ylabel('doppler');
+%         xlabel('Time (secs)');
+        hold off
+        legend('data1','data2', 'Ref_prn');
+    end
+end
+end
+
 % 单差
 function Single_Diff(Data, Ref_Data)
     PRNtmp = {};

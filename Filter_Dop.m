@@ -7,7 +7,7 @@ FREQ1 = 1.57542E9;
 FREQ1_CMP = 1.561098E9;
 
 % Branch = 1;
-Branch = 3;
+Branch = 4;
 save('Branch.mat', 'Branch');
 % 变量
 RefPrn = 19;%GPS 19作为起始参考星
@@ -18,8 +18,12 @@ txt_file = 'QR5gnss2411.19o';
 txt_path ='/media/ftw/diske/GNSSDATA/0829Second/IFData/Result_20210103_1/';
 % 粗差剔除
 time_p = {};%时间信息
+predict_dop_p = {};
 dop_p = {};%多普勒信息
 PRN = [];%卫星编号
+ref_prn = [];%参考星编号
+time_ref_prn =[];%对应时间
+
 MeasureFilter_Init();
 h_txt_file = fopen([txt_path,txt_file]);
 [GPSTime, n] = ReadObsHead(h_txt_file);%读取文件头
@@ -65,11 +69,15 @@ while(1)
             PRN = [PRN, obs{Index}.sat];
             time_p = [time_p, GPSTime];
             dop_p = [dop_p, obs{Index}.D];
+            predict_dop_p = [predict_dop_p, obs{Index}.Pack_D];
         elseif (sum(PRN == obs{Index}.sat)) == 1
             time_p{PRN == obs{Index}.sat} = [time_p{PRN == obs{Index}.sat}, GPSTime];
             dop_p{PRN == obs{Index}.sat} = [dop_p{PRN == obs{Index}.sat}, obs{Index}.D];
+            predict_dop_p{PRN == obs{Index}.sat} = [predict_dop_p{PRN == obs{Index}.sat}, obs{Index}.Pack_D];
         end
-        
+        % save ref_sat info
+        ref_prn = [ref_prn obs{Index}.sat];
+        time_ref_prn = [time_ref_prn GPSTime];
         for i = 1:min(n, 64)
             if (i == Index)
                 continue;
@@ -87,9 +95,11 @@ while(1)
                 PRN = [PRN, obs{i}.sat];
                 time_p = [time_p, GPSTime];
                 dop_p = [dop_p, Fix_Dop];
+                predict_dop_p = [predict_dop_p, obs{i}.Pack_D];
             elseif (sum(PRN == obs{i}.sat)) == 1
                 time_p{PRN == obs{i}.sat} = [time_p{PRN == obs{i}.sat}, GPSTime];
                 dop_p{PRN == obs{i}.sat} = [dop_p{PRN == obs{i}.sat}, Fix_Dop];
+                predict_dop_p{PRN == obs{i}.sat} = [predict_dop_p{PRN == obs{i}.sat}, obs{i}.Pack_D];
             end
         end
     else %换星
@@ -113,10 +123,15 @@ while(1)
                     PRN = [PRN, obs{Chooseindex}.sat];
                     time_p = [time_p, GPSTime];
                     dop_p = [dop_p, obs{Chooseindex}.D];
+                    predict_dop_p = [predict_dop_p, obs{Chooseindex}.Pack_D];
                 elseif (sum(PRN == obs{Chooseindex}.sat)) == 1
                     time_p{PRN == obs{Chooseindex}.sat} = [time_p{PRN == obs{Chooseindex}.sat}, GPSTime];
                     dop_p{PRN == obs{Chooseindex}.sat} = [dop_p{PRN == obs{Chooseindex}.sat}, obs{Chooseindex}.D];
+                    predict_dop_p{PRN == obs{Chooseindex}.sat} = [predict_dop_p{PRN == obs{Chooseindex}.sat}, obs{Chooseindex}.Pack_D];
                 end
+                
+                ref_prn = [ref_prn obs{Index}.sat];
+                time_ref_prn = [time_ref_prn GPSTime];
                 %改变滤波器状态
                 
                 RefPrn = RefSate;
@@ -138,9 +153,11 @@ while(1)
                         PRN = [PRN, obs{i}.sat];
                         time_p = [time_p, GPSTime];
                         dop_p = [dop_p, Fix_Dop];
+                        predict_dop_p = [predict_dop_p, obs{i}.Pack_D];
                     elseif (sum(PRN == obs{i}.sat)) == 1
                         time_p{PRN == obs{i}.sat} = [time_p{PRN == obs{i}.sat}, GPSTime];
                         dop_p{PRN == obs{i}.sat} = [dop_p{PRN == obs{i}.sat}, Fix_Dop];
+                        predict_dop_p{PRN == obs{i}.sat} = [predict_dop_p{PRN == obs{i}.sat}, obs{i}.Pack_D];
                     end
                 end
             end
@@ -150,7 +167,7 @@ while(1)
     % 读取下一次的时间及星数
     [GPSTime, n] = ReadObsTimeInfo(h_txt_file);
 end
-% 保存数据
+%% 保存数据
 sate_N = length(dop_p);
 PRN_str = cell(1, sate_N);
 for i = 1:sate_N
@@ -164,6 +181,7 @@ end
 Fixed_Data.PRN = PRN_str;
 Fixed_Data.time = time_p;
 Fixed_Data.doppler = dop_p;
+Fixed_Data.predict = predict_dop_p;
 file_name = ['doppler_all_' num2str(Branch) '.mat'];
 save(file_name, 'Fixed_Data');
 %% 画图
