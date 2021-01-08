@@ -32,18 +32,18 @@ for i = 1:sate_N
     
 end
 %% 真值
+True_Data = Predict_Data;
 Sate_N = length(True_Data.PRN);
 
 for i = 1:Sate_N
     myplot1(True_Data.time{i}, True_Data.doppler{i}, 'doppler', True_Data.PRN{i}, i, 'r');
 end
-
-
+%% 
+plotcompare(True_Data, Fixed_Data);
 %% plot 单差对比
-
-plotcompare(RealSingleDiff_Data, SDTest_Data);
+plotcompare(RealSingleDiff_Data, RealSingleDiff_DataQR0);
 %% plot 双差对比
-plotcompare_3(DoubleDiff_Data, DDTest_Data);
+plotcompare_3(DoubleDiff_Data, DoubleDiff_DataQR0);
 %% plot双差
 Sate_N = length(DoubleDiff_Data.PRN);
 
@@ -132,6 +132,7 @@ figure(n);set(gcf,'Position',get(0,'ScreenSize'));
 plot(X, Y, 'Color', color, 'Marker', '.', 'LineStyle', 'none');
 axis xy
 axis tight
+%ylim([-240 -195])
 ylabel(ylabel_s);
 xlabel('Time (secs)');
 end
@@ -156,8 +157,10 @@ for i = 1:Sate_N
 %         axis tight
 %         ylabel('doppler');
 %         xlabel('Time (secs)');
+        
         hold off
         legend('data1','data2');
+        saveas(gcf,['./bmp/', Data1.PRN{i}, '.bmp']);
     end
 end
 end
@@ -187,7 +190,9 @@ for i = 1:Sate_N
 %         ylabel('doppler');
 %         xlabel('Time (secs)');
         hold off
-        legend('data1','data2', 'Ref_prn');
+        legend('data1','data2', 'Ref\_prn');
+        %['./bmp/', Data1.PRN{i}, '.bmp']
+        saveas(gcf,['./bmp/', Data1.PRN{i}, '.bmp'])
     end
 end
 end
