@@ -119,7 +119,7 @@ h_txt_file = fopen([txt_path,txt_file]);
 C2 = textscan(h_txt_file,"%s %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f",...
         'HeaderLine', 15);
 
-
+%% 
 [time_p_0, dop_p_0, PRN_0] =  GetObsDop(C0);
 [time_p_1, dop_p_1, PRN_1] =  GetObsDop(C1);
 [time_p_2, dop_p_2, PRN_2] =  GetObsDop(C2);
@@ -128,6 +128,21 @@ QR3_Data = GetDataStruct(time_p_0, dop_p_0, PRN_0);
 QR0_Data = GetDataStruct(time_p_1, dop_p_1, PRN_1);
 True_Data = GetDataStruct(time_p_2, dop_p_2, PRN_2);
 save('doppler_01.mat','QR3_Data', 'QR0_Data', 'True_Data');
+
+%% 
+txt_file = 'QR3gnss2411.19o';
+txt_path = '/media/ftw/diske/GNSSDATA/0829Second/IFData/Result_20201127_PseAidCodeLoop_Timeratio/ResultPost/';
+h_txt_file = fopen([txt_path,txt_file]);
+C3 = textscan(h_txt_file,"%s %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f",...
+        'HeaderLine', 15);
+fclose(h_txt_file);
+%
+[time_p_3, dop_p_3, PRN_3] =  GetObsDop(C3);
+%
+PostResult_Data = GetDataStruct(time_p_3, dop_p_3, PRN_3);
+%
+save('PostResult_Data.mat','PostResult_Data');
+
 %% 画图
 sate_N = length(dop_p_0);
 for i = 1:sate_N

@@ -1,4 +1,4 @@
-%% 变量声明
+%% 多普勒粗差剔除
 clc
 clear
 % 常量
@@ -7,11 +7,11 @@ FREQ1 = 1.57542E9;
 FREQ1_CMP = 1.561098E9;
 
 % Branch = 1;
-Branch = 4;
+Branch = 6;
 save('Branch.mat', 'Branch');
 % 变量
 RefPrn = 19;%GPS 19作为起始参考星
-
+FirstFlag = 1;
 % 读取数据
 %[txt_file,txt_path] = uigetfile('/media/ftw/diske/GNSSDATA/0829Second/IFData/Result_20210103_1/QR5*.19o');
 txt_file = 'QR5gnss2411.19o';
@@ -26,9 +26,19 @@ time_ref_prn =[];%对应时间
 
 MeasureFilter_Init();
 h_txt_file = fopen([txt_path,txt_file]);
-[GPSTime, n] = ReadObsHead(h_txt_file);%读取文件头
 while(1)
-    [obs, rs, Pos_INS, Vel_INS, dts, error] = ReadObsEpoch(h_txt_file, n);
+    if FirstFlag == 1
+        [GPSTime, n] = ReadObsHead(h_txt_file);%读取文件头
+        [obs, rs, Pos_INS, Vel_INS, dts, error] = ReadObsEpoch(h_txt_file, n);
+    else
+        obs_last = obs;
+        dts_last = dts;
+        n_last = n;
+        GPSTime_last = GPSTime;
+        % 读取下一次的时间及星数
+        [GPSTime, n] = ReadObsTimeInfo(h_txt_file);
+        [obs, rs, Pos_INS, Vel_INS, dts, error] = ReadObsEpoch(h_txt_file, n);
+    end
     if error == 1 %读取结束
         msgbox(['end in' num2str(GPSTime)], '提示');
         fclose(h_txt_file);
@@ -49,11 +59,29 @@ while(1)
         Rel_Vel = rs(6*i-2 : 6*i) - Vel_INS;% 相对速度
         DeltRk = Rel_Vel*L_Sate.';% 反视线方向上与相对速度的点积
         if obs{i}.sat > 32
-            DeltRk = -1*DeltRk/(CLIGHT/FREQ1_CMP);
+            DeltRk = -1*DeltRk/(CLIGHT/FREQ1_CMP);% BD
         else
-            DeltRk = -1*DeltRk/(CLIGHT/FREQ1);
+            DeltRk = -1*DeltRk/(CLIGHT/FREQ1);% GPS
         end
         obs{i}.Pack_D = DeltRk;
+%         if FirstFlag == 0
+%             for j = 1 : n_last
+%                 if obs{i}.sat == obs_last{j}.sat
+%                     ddts = (dts(i) - dts_last(j))/(GPSTime - GPSTime_last);
+%                     if obs{i}.sat > 32
+%                         ddts = ddts/(CLIGHT/FREQ1_CMP);% BD
+%                     else
+%                         ddts = ddts/(CLIGHT/FREQ1);% GPS
+%                     end
+%                     obs{i}.Pack_D = DeltRk + ddts * 1000;
+%                     break;
+%                 end
+%                 obs{i}.Pack_D = DeltRk;
+%             end
+%         else        
+%             obs{i}.Pack_D = DeltRk;
+%         end
+    
     end
     
     for i = 1:min(n, 64) %仅限于GPS卫星
@@ -163,9 +191,7 @@ while(1)
             end
         end
     end
-    
-    % 读取下一次的时间及星数
-    [GPSTime, n] = ReadObsTimeInfo(h_txt_file);
+    FirstFlag = 0;
 end
 %% 保存数据
 sate_N = length(dop_p);
@@ -185,6 +211,7 @@ Fixed_Data.predict = predict_dop_p;
 file_name = ['doppler_all_' num2str(Branch) '.mat'];
 save(file_name, 'Fixed_Data');
 %% 画图
+%{
 sate_N = length(dop_p);
 for i = 1:sate_N
     if length(time_p{i})<100
@@ -192,8 +219,9 @@ for i = 1:sate_N
     end
     myplot(time_p{i}, dop_p{i}, 'doppler', num2str(PRN(i)), i);
 end
-
+%}
 %% 滤波器测试
+%{
 clear
 clc
 MeasureFilter_Init();
@@ -208,7 +236,7 @@ end
 plot(Result);
 hold on
 plot(InputDop);
-
+%}
 %% 函数定义
 % 多普勒滤波函数
 function Filter_Result =  MeasureFilter_DoplorFunc(satenum, temDop)
@@ -218,8 +246,12 @@ function Filter_Result =  MeasureFilter_DoplorFunc(satenum, temDop)
     temdoulist = [];
     temMfs = MeasureFilter_Struct();
     temint = 0;
-    
+    Filter_Result = 0;
     temlt = find(SateMap{1} == satenum);
+    
+    if abs(temDop) > 50
+        return;
+    end
     
     if isempty(temlt) % 未找到该卫星
         SateMap{1} = [SateMap{1}, satenum];
@@ -235,7 +267,7 @@ function Filter_Result =  MeasureFilter_DoplorFunc(satenum, temDop)
         MeasureData{temint}.Mdoppler_Group = [MeasureData{temint}.Mdoppler_Group, temDop];
         MeasureData{temint}.Filter_Mdoppler = mean(MeasureData{temint}.Mdoppler_Group);
     else
-        if(abs(temDop - MeasureData{temint}.Filter_Mdoppler) < 4.0)
+        if (abs(temDop - MeasureData{temint}.Filter_Mdoppler) < 4.0)
             MeasureData{temint}.Mdoppler_Group = [MeasureData{temint}.Mdoppler_Group(2:end), temDop];
             temdoulist = sort(MeasureData{temint}.Mdoppler_Group);
             MeasureData{temint}.Filter_Mdoppler = mean(temdoulist(9:13));%中间5个值进行平均

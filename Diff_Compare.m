@@ -4,14 +4,13 @@ clc
 load('doppler_01.mat');% QR0 QR3 真值
 load('SDTest_Data.mat');% 读取的多普勒单差
 load('DDTest_Data.mat');% 读取的多普勒双差
-%% 单差
+%% 作单差
 %load(GetStructName('doppler_all'));% matlab仿真出的多普勒
-Single_Diff(Predict_Data, True_Data);
-%% 双差
+Single_Diff(Fixed_Data, True_Data);
+%% 作双差
 %load(GetStructName('RealSingleDiff_Data'));% matlab仿真出的单差
 Double_Diff(RealSingleDiff_Data, 'G19', 'C30');
 %load(GetStructName('DoubleDiff_Data'));% matlab仿真出的双差
-
 %% 与接收机中的多普勒对比
 sate_N = length(Fixed_Data.PRN);
 for i = 1:sate_N
@@ -39,17 +38,11 @@ for i = 1:Sate_N
     myplot1(True_Data.time{i}, True_Data.doppler{i}, 'doppler', True_Data.PRN{i}, i, 'r');
 end
 %% 
-plotcompare(True_Data, Fixed_Data);
+plotcompare(Fixed_Data, QR0_Data);
 %% plot 单差对比
-plotcompare(RealSingleDiff_Data, RealSingleDiff_DataQR0);
+plotcompare(RealSingleDiff_Data, RealSingleDiff_Data_4);
 %% plot 双差对比
 plotcompare_3(DoubleDiff_Data, DoubleDiff_DataQR0);
-%% plot双差
-Sate_N = length(DoubleDiff_Data.PRN);
-
-for i = 1:Sate_N
-    myplot1(DoubleDiff_Data.time{i}, DoubleDiff_Data.doppler{i}, 'doppler', DoubleDiff_Data.PRN{i}, i, 'r');
-end
 %% 测试
 Data = RealSingleDiff_Data;
 ref_gps = 'G19';
