@@ -7,8 +7,9 @@ load('./data/DDTest_Data.mat');% 读取的多普勒双差
 %% 作单差
 clear
 load('./data/doppler_01.mat')
-load(GetStructName('doppler_all'));% matlab仿真出的多普勒
-Single_Diff(Fixed_Data, True_Data);
+load('./data/doppler_04.mat')
+%load(GetStructName('doppler_all'));% matlab仿真出的多普勒
+Single_Diff(QR3_Data, True_Data);
 % 作双差
 load(GetStructName('RealSingleDiff_Data'));% matlab仿真出的单差
 Double_Diff(RealSingleDiff_Data, 'G19', 'C30');

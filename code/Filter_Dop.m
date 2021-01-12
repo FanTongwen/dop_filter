@@ -7,7 +7,7 @@ FREQ1 = 1.57542E9;
 FREQ1_CMP = 1.561098E9;
 
 % Branch = 1;
-Branch = 11;
+Branch = 13;
 save('./data/Branch.mat', 'Branch');
 % 变量
 RefPrn = 19;%GPS 19作为起始参考星
