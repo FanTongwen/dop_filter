@@ -93,11 +93,11 @@ if txt_file ~= 0
 end
 %}
 txt_file = 'QR3gnss2411.19o';
-txt_path = '/media/ftw/diske/GNSSDATA/0829Second/IFData/Result_20201127_PseAidCodeLoop_Timeratio/';
+txt_path = '/media/ftw/diske/GNSSDATA/0829Second/IFData/Result_20210112/';
 h_txt_file = fopen([txt_path,txt_file]);
 C0 = textscan(h_txt_file,"%s %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f",...
         'HeaderLine', 15);
-% QR0
+%% QR0
 %{
 [txt_file,txt_path] = uigetfile('/media/ftw/diske/GNSSDATA/0829Second/IFData/Result_20201127_PseAidCodeLoop_Timeratio/QR0*.19o');
 if txt_file ~= 0
@@ -121,13 +121,13 @@ C2 = textscan(h_txt_file,"%s %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f 
 
 %% 
 [time_p_0, dop_p_0, PRN_0] =  GetObsDop(C0);
-[time_p_1, dop_p_1, PRN_1] =  GetObsDop(C1);
-[time_p_2, dop_p_2, PRN_2] =  GetObsDop(C2);
+%[time_p_1, dop_p_1, PRN_1] =  GetObsDop(C1);
+%[time_p_2, dop_p_2, PRN_2] =  GetObsDop(C2);
 %% 保存
 QR3_Data = GetDataStruct(time_p_0, dop_p_0, PRN_0);
-QR0_Data = GetDataStruct(time_p_1, dop_p_1, PRN_1);
-True_Data = GetDataStruct(time_p_2, dop_p_2, PRN_2);
-save('doppler_01.mat','QR3_Data', 'QR0_Data', 'True_Data');
+%QR0_Data = GetDataStruct(time_p_1, dop_p_1, PRN_1);
+%True_Data = GetDataStruct(time_p_2, dop_p_2, PRN_2);
+save('./data/doppler_03.mat','QR3_Data');
 
 %% 
 txt_file = 'QR3gnss2411.19o';

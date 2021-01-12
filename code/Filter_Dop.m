@@ -7,7 +7,7 @@ FREQ1 = 1.57542E9;
 FREQ1_CMP = 1.561098E9;
 
 % Branch = 1;
-Branch = 7;
+Branch = 11;
 save('./data/Branch.mat', 'Branch');
 % 变量
 RefPrn = 19;%GPS 19作为起始参考星
@@ -126,7 +126,7 @@ while(1)
             end
             
             Star_INS_DDiff = (obs{Index}.D - obs{Index}.Pack_D) - (obs{i}.D - obs{i}.Pack_D);% 多普勒双差
-            Star_INS_DDiff_s = MeasureFilter_DoplorFunc(obs{i}.sat, Star_INS_DDiff);% 平滑
+            Star_INS_DDiff_s = MeasureFilter_DoplorFunc1(obs{i}.sat, Star_INS_DDiff);% 平滑
             
             Fix_Dop = obs{i}.D + (Star_INS_DDiff - Star_INS_DDiff_s);% 修正的多普勒
             
@@ -203,7 +203,7 @@ while(1)
                     end
                     
                     Star_INS_DDiff = (obs{Chooseindex}.D - obs{Chooseindex}.Pack_D) - (obs{i}.D - obs{i}.Pack_D);% 多普勒双差
-                    Star_INS_DDiff_s = MeasureFilter_DoplorFunc(obs{i}.sat, Star_INS_DDiff);% 平滑
+                    Star_INS_DDiff_s = MeasureFilter_DoplorFunc1(obs{i}.sat, Star_INS_DDiff);% 平滑
                     
                     Fix_Dop = obs{i}.D + (Star_INS_DDiff - Star_INS_DDiff_s);% 修正的多普勒
                     % 保存其他信息
@@ -246,6 +246,7 @@ Fixed_Data.doppler = dop_p;
 Fixed_Data.predict = predict_dop_p;
 file_name = ['./data/doppler_all_' num2str(Branch) '.mat'];
 save(file_name, 'Fixed_Data');
+save(['./data/info_dopfilter_' num2str(Branch) '.mat'], 'info_dopfilter');
 %% 画图
 %{
 sate_N = length(dop_p);
@@ -273,6 +274,8 @@ plot(Result);
 hold on
 plot(InputDop);
 %}
+
+
 %% 函数定义
 % 多普勒滤波函数
 function Filter_Result =  MeasureFilter_DoplorFunc(satenum, temDop)
@@ -331,19 +334,75 @@ function Filter_Result =  MeasureFilter_DoplorFunc1(satenum, temDop)
         SateMap{2} = [SateMap{2}, MeasureSate_Count];
         MeasureData = [MeasureData, temMfs];
         temint = MeasureSate_Count;
-        MeasureSate_Count = MeasureSate_Count + 1; 
+        MeasureSate_Count = MeasureSate_Count + 1;
     else
         temint = SateMap{2}(temlt);
     end
     
-    if(length(MeasureData{temint}.Mdoppler_Group) < 5)
+    if(length(MeasureData{temint}.Mdoppler_Group) < 6)
         MeasureData{temint}.Mdoppler_Group = [MeasureData{temint}.Mdoppler_Group, temDop];
         MeasureData{temint}.Filter_Mdoppler = mean(MeasureData{temint}.Mdoppler_Group);
     else
-        if (abs(temDop - MeasureData{temint}.Filter_Mdoppler) < 4.0)
+        if abs(MeasureData{temint}.Filter_Mdoppler - temDop) < 100.0
             MeasureData{temint}.Mdoppler_Group = [MeasureData{temint}.Mdoppler_Group(2:end), temDop];
+            var_temp1 = MeasureData{temint}.Mdoppler_Group(2:end) - MeasureData{temint}.Mdoppler_Group(1:end - 1);
+            var_temp = var(var_temp1);
             temdoulist = sort(MeasureData{temint}.Mdoppler_Group);
-            MeasureData{temint}.Filter_Mdoppler = temdoulist(3);%中间5个值进行平均
+            thold = 0.9;
+            if var_temp < thold
+                MeasureData{temint}.Filter_Mdoppler = mean(temdoulist(3:4));
+            elseif var_temp >=  thold&& var_temp < 5
+                alpha = 1/((var_temp/thold)^2);
+                MeasureData{temint}.Filter_Mdoppler = mean(temdoulist(3:4))*alpha;
+            elseif var_temp>=5
+                MeasureData{temint}.Filter_Mdoppler = 0;
+            end
+        end
+    end
+    Filter_Result = MeasureData{temint}.Filter_Mdoppler;
+end
+
+function Filter_Result =  MeasureFilter_DoplorFunc2(satenum, temDop)
+    global SateMap;
+    global MeasureData;
+    global MeasureSate_Count;
+    temdoulist = [];
+    temMfs = MeasureFilter_Struct();
+    temint = 0;
+    Filter_Result = 0;
+    temlt = find(SateMap{1} == satenum);
+    
+    if abs(temDop) > 50
+        return;
+    end
+    
+    if isempty(temlt) % 未找到该卫星
+        SateMap{1} = [SateMap{1}, satenum];
+        SateMap{2} = [SateMap{2}, MeasureSate_Count];
+        MeasureData = [MeasureData, temMfs];
+        temint = MeasureSate_Count;
+        MeasureSate_Count = MeasureSate_Count + 1;
+    else
+        temint = SateMap{2}(temlt);
+    end
+    
+    if(length(MeasureData{temint}.Mdoppler_Group) < 6)
+        MeasureData{temint}.Mdoppler_Group = [MeasureData{temint}.Mdoppler_Group, temDop];
+        MeasureData{temint}.Filter_Mdoppler = mean(MeasureData{temint}.Mdoppler_Group);
+    else
+        if abs(MeasureData{temint}.Filter_Mdoppler - temDop) < 10.0
+            MeasureData{temint}.Mdoppler_Group = [MeasureData{temint}.Mdoppler_Group(2:end), temDop];
+            var_temp1 = MeasureData{temint}.Mdoppler_Group(2:end) - MeasureData{temint}.Mdoppler_Group(1:end - 1);
+            var_temp = var(var_temp1);
+            temdoulist = sort(MeasureData{temint}.Mdoppler_Group);
+            if var_temp < 1.5
+                MeasureData{temint}.Filter_Mdoppler = mean(temdoulist(3:4));
+            elseif var_temp >= 1.5 && var_temp < 5
+                alpha = 1/((var_temp/1.5)^2);
+                MeasureData{temint}.Filter_Mdoppler = mean(temdoulist(3:4))*alpha + MeasureData{temint}.Filter_Mdoppler*(1 - alpha);
+            elseif var_temp>=5
+                % MeasureData{temint}.Filter_Mdoppler = 0;
+            end
         end
     end
     Filter_Result = MeasureData{temint}.Filter_Mdoppler;

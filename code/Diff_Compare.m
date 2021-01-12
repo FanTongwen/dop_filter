@@ -9,7 +9,7 @@ clear
 load('./data/doppler_01.mat')
 load(GetStructName('doppler_all'));% matlab仿真出的多普勒
 Single_Diff(Fixed_Data, True_Data);
-%% 作双差
+% 作双差
 load(GetStructName('RealSingleDiff_Data'));% matlab仿真出的单差
 Double_Diff(RealSingleDiff_Data, 'G19', 'C30');
 %load(GetStructName('DoubleDiff_Data'));% matlab仿真出的双差
@@ -44,23 +44,50 @@ plotcompare(Fixed_Data, QR0_Data);
 %% plot 单差对比
 plotcompare(RealSingleDiff_Data, RealSingleDiff_Data_4);
 %% plot 双差对比 
-load('./data/DoubleDiff_DataQR0_3.mat');
-DoubleDiff_DataQR0=DoubleDiff_Data
+load('./data/DoubleDiff_Data.mat');
+DoubleDiff_Datatemp=DoubleDiff_Data;
 load(GetStructName('DoubleDiff_Data'));
-plotcompare_3(DoubleDiff_Data, DoubleDiff_DataQR0);
+plotcompare_3(DoubleDiff_Data, DoubleDiff_Datatemp);
 %% info_dopfilter
-load('./data/info_dopfilter.mat')
+load(GetStructName('info_dopfilter'));
 sate_N = length(Fixed_Data.PRN);
 for i =1:sate_N
     myplot2(Fixed_Data.time{i}, [info_dopfilter{i}.diff], 'Hz', i, 'r')
     hold on
-    myplot2(Fixed_Data.time{i}, [info_dopfilter{i}.diff_s], 'Hz', i, 'y')
-    hold on
-    myplot2(Fixed_Data.time{i}, [info_dopfilter{i}.gerror], 'Hz', i, 'blue')
+    myplot2(Fixed_Data.time{i}, [info_dopfilter{i}.diff_s], 'Hz', i, 'g')
+    %hold on
+    %myplot2(Fixed_Data.time{i}, [info_dopfilter{i}.gerror], 'Hz', i, 'blue')
     title(Fixed_Data.PRN{i})
     legend('diff','diff_s','gerror')
     saveas(gcf,['./pic/info_dopfilter/', Fixed_Data.PRN{i}, '.bmp'])
 end
+
+%% a test
+filter_in = zeros(Fixed_Data.time{8}(end) - Fixed_Data.time{8}(1) + 1,1);
+filter_out = filter_in;
+%%
+filter_in(Fixed_Data.time{8} - Fixed_Data.time{8}(1) + 1) = [info_dopfilter{8}.diff];
+
+ss = filter_in(2:end) -filter_in(1:end-1);
+sss = (ss(2:end) - ss(1:end -1));
+sss = sss/2;
+
+for i = 5:length(filter_in) -1
+    if var(ss(i-4:i)) < 0.9
+        filter_out(i+1) = filter_in(i+1);
+    elseif var(ss(i-4:i)) >=0.9
+        filter_out(i+1) = filter_in(i+1)/((var(ss(i-4:i))/0.9)^2);
+    end
+end
+
+%myplot2(Fixed_Data.time{5}(1):Fixed_Data.time{5}(end)-2, ...
+%    sss, 'Hz', 1, 'r')
+%hold on
+
+myplot2(Fixed_Data.time{5}(1):Fixed_Data.time{5}(end), filter_in, 'Hz', 1, 'blue')
+hold on
+myplot2(Fixed_Data.time{5}(1):Fixed_Data.time{5}(end), filter_out, 'Hz', 1, 'r')
+
 %% 测试
 Data = RealSingleDiff_Data;
 ref_gps = 'G19';
@@ -143,7 +170,7 @@ figure(n);set(gcf,'Position',get(0,'ScreenSize'));
 plot(X, Y, 'Color', color, 'Marker', '.', 'LineStyle', 'none');
 axis xy
 axis tight
-%ylim([-240 -195])
+ylim([-20 20])
 ylabel(ylabel_s);
 xlabel('Time (secs)');
 end
@@ -203,7 +230,7 @@ for i = 1:Sate_N
         hold off
         legend('data1','data2', 'Ref\_prn');
         %['./bmp/', Data1.PRN{i}, '.bmp']
-        saveas(gcf,['./pic/bmp', Data1.PRN{i}, '.bmp'])
+        saveas(gcf,['./pic/doublediff/', Data1.PRN{i}, '.bmp'])
     end
 end
 end
